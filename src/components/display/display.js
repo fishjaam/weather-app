@@ -1,0 +1,109 @@
+import React, { Component } from 'react';
+import GoogleMap from 'google-map-react';
+
+import Marker from '../marker/marker'
+import Modal from '../UI/Modal/Modal';
+import Spinner from '../UI/Spinner/Spinner';
+import * as markerData from '../../data/markers';
+
+
+class Display extends Component {  
+
+    state = {
+        city: null,
+        description: null,
+        currentTemp: null,
+        humidity: null,
+        windSpeed: null,
+        windDirection: null,
+        precipitationChance: null,
+        displayModal: false,
+        loading: false
+    }
+
+    componentDidMount() {
+        //this.getCall();
+    }
+
+    getCall = async (lat, lng) => {  
+        // const api_call = await fetch('http://api.openweathermap.org/data/2.5/weather?q=london,uk&appid=1ef7818f68bfad277d85d9eee7072931');
+        const api_call = await fetch(`https://api.weather.gov/points/${lat},${lng}`);
+      
+        //console.log(api_call);
+        const response = await api_call.json();
+
+        if(response.properties){
+            //To get all possible api calls for different data use console statement below
+            //console.log(response.properties)
+
+            //api calls  
+            this.getWeather(response.properties.forecast)
+            // this.getWeather(response.properties.forecastGridData)
+        }
+      }
+
+    getWeather = async (call) => {
+        
+        const api_call = await fetch(call);
+        
+        const response = await api_call.json();
+
+        console.log(response);
+        const desc = response.properties.periods[0].shortForecast
+        const temp = response.properties.periods[0].temperature
+        this.setState({displayModal: true, loading: false, 
+                description: desc, temperature: temp})
+    }
+
+    displayCityDetails = (chosenCity, lat, lng) => {
+        this.setState({city: chosenCity, loading: true});
+
+        this.getCall(lat, lng)
+    }
+
+    modalClosed = () => {
+        this.setState({displayModal: false})
+    }
+  
+    render() {
+        const mapStyles = {
+            width: '100%',
+            height: '100%'
+        }
+
+        const spinner = this.state.loading ? <Spinner /> : null;
+
+        const modal = this.state.displayModal ? <Modal 
+            showModal={this.state.displayModal}
+            modalClosed={this.modalClosed}
+            city={this.state.city}
+            description={this.state.description}
+            temperature={this.state.temperature}/> : null
+
+        let markersOnMap = markerData.markers.map(marker => (
+            <Marker
+                lat={marker.lat}
+                lng={marker.long}
+                key={marker.id}
+                title={marker.id}
+                displayCityDetails={() => this.displayCityDetails(marker.id, marker.lat, marker.long)}/>
+        ));
+
+        return (
+            <div>
+                <GoogleMap
+                    style={mapStyles}
+                    bootstrapURLKeys={{ key: 'AIzaSyAQM-xeQqZLNAdmdd1qDADS2Puag7RKSCQ' }}
+                    center={{ lat: 30, lng: -95 }}
+                    zoom={4.5}
+                >  
+                    {markersOnMap}
+                </GoogleMap>
+                {spinner}
+                {modal}
+            </div>
+        )
+  }
+}
+
+export default Display;
