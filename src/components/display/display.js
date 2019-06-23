@@ -17,19 +17,21 @@ class Display extends Component {
         windSpeed: null,
         windDirection: null,
         precipitationChance: null,
+        iconURL: null,
         displayModal: false,
-        loading: false
+        loading: false,
     }
 
     componentDidMount() {
-        //this.getCall();
+        for(let marker of markerData.markers){
+            //this.getCall(marker.lat, marker.long)
+        }
+        // this.getCall();
     }
 
     getCall = async (lat, lng) => {  
         // const api_call = await fetch('http://api.openweathermap.org/data/2.5/weather?q=london,uk&appid=1ef7818f68bfad277d85d9eee7072931');
         const api_call = await fetch(`https://api.weather.gov/points/${lat},${lng}`);
-      
-        //console.log(api_call);
         const response = await api_call.json();
 
         if(response.properties){
@@ -38,7 +40,7 @@ class Display extends Component {
 
             //api calls  
             this.getWeather(response.properties.forecast)
-            // this.getWeather(response.properties.forecastGridData)
+            //this.getWeather(response.properties.forecastGridData)
         }
       }
 
@@ -51,19 +53,31 @@ class Display extends Component {
         console.log(response);
         const desc = response.properties.periods[0].shortForecast
         const temp = response.properties.periods[0].temperature
-        this.setState({displayModal: true, loading: false, 
-                description: desc, temperature: temp})
+        const windSpeed = response.properties.periods[0].windSpeed
+        const windDirection = response.properties.periods[0].windDirection
+        const iconURL = response.properties.periods[0].icon
+
+        this.setState({loading: false, 
+                description: desc, temperature: temp,
+                windSpeed: windSpeed, windDirection: windDirection,
+                iconURL: iconURL})
     }
 
     displayCityDetails = (chosenCity, lat, lng) => {
-        this.setState({city: chosenCity, loading: true});
+        this.setState({city: chosenCity, loading: true, displayModal: true});
 
         this.getCall(lat, lng)
+    }
+
+    onMapClick = (event) => {
+        this.setState({loading: true, displayModal: true});
+        this.getCall(event.lat, event.lng)
     }
 
     modalClosed = () => {
         this.setState({displayModal: false})
     }
+
   
     render() {
         const mapStyles = {
@@ -78,7 +92,10 @@ class Display extends Component {
             modalClosed={this.modalClosed}
             city={this.state.city}
             description={this.state.description}
-            temperature={this.state.temperature}/> : null
+            temperature={this.state.temperature}
+            windSpeed={this.state.windSpeed}
+            windDirection={this.state.windDirection}
+            icon={this.state.iconURL}/> : null
 
         let markersOnMap = markerData.markers.map(marker => (
             <Marker
@@ -96,6 +113,7 @@ class Display extends Component {
                     bootstrapURLKeys={{ key: 'AIzaSyAQM-xeQqZLNAdmdd1qDADS2Puag7RKSCQ' }}
                     center={{ lat: 30, lng: -95 }}
                     zoom={4.5}
+                    onClick={(event) => this.onMapClick(event)}
                 >  
                     {markersOnMap}
                 </GoogleMap>
